@@ -16,7 +16,7 @@ $ terraform init
 ```
 ![](https://miro.medium.com/max/1400/1*MJfTvy0VCIRU2BuoKATzUg.png)
 
-# Amazon Resources Created Using Terraform
+### Amazon Resources Created Using Terraform ###
 
 1.  AWS VPC with required CIDR. You can change the default value in the variable “cidr_vpc”.
 ```
@@ -36,7 +36,7 @@ variable "cidr_vpc" {
 
 7. Associating AWS VPC Subnets with VPC route tables.
 
-**Step 1 . Define and configure Terraform providers.**
+## Step 1 . Define and configure Terraform providers. ##
 
 The provider.tf file tells Terraform which provider to use. Because of the provider “aws,” all infrastructure will be hosted on AWS. Here we are defining the region and authentication required for the IAM user, which is used by Terraform to do AWS operations.
 ```
