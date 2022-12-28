@@ -2,7 +2,7 @@
 
 ![](https://miro.medium.com/max/1400/0*TBBrFvlIpywPioWT.png)
 
-This article uses Terraform code to deploy AWS VPC, Public and Private Subnets with NAT Gateway.
+This article uses a refactored Terraform code to deploy AWS VPC, Public and Private Subnets with NAT Gateway.
 
 You can utilize the code explained here to build your own infra as I have tried to keep it generic in terms of the number of Subnets and Availability Zones. This number is decided by the selection of your desired region.
 
@@ -16,10 +16,10 @@ $ terraform init
 ```
 ![](https://miro.medium.com/max/1400/1*MJfTvy0VCIRU2BuoKATzUg.png)
 
-### Amazon Resources Created Using Terraform ###
+### Amazon Resources Created Using Terraform
 
 1.  AWS VPC with required CIDR. You can change the default value in the variable “cidr_vpc”.
-```
+```sh
 variable "cidr_vpc" {  
   default = "172.16.0.0/16"  
 }
@@ -36,10 +36,10 @@ variable "cidr_vpc" {
 
 7. Associating AWS VPC Subnets with VPC route tables.
 
-## Step 1 . Define and configure Terraform providers. ##
+## Step 1 . Define and configure Terraform providers.
 
 The provider.tf file tells Terraform which provider to use. Because of the provider “aws,” all infrastructure will be hosted on AWS. Here we are defining the region and authentication required for the IAM user, which is used by Terraform to do AWS operations.
-```
+```sh
 /*==== Provider ======*/  
 /* Setting up of provider name and associated authentication */  
   
@@ -55,7 +55,7 @@ provider "aws" {
 }
 ```
 Default tags will be attached to all the resources created by terraform.
-```
+```sh
 locals {  
   common_tags = {  
     project     = var.project  
@@ -65,8 +65,8 @@ locals {
   }  
 }
 ```
-**Step 2: Variables are defined inside variables.tf file.**
-```
+## Step 2: Variables are defined inside variables.tf file.
+```sh
 /*==== Variable declerations ======*/  
   
 variable "project" {  
@@ -137,10 +137,10 @@ locals {
   subnets = length(data.aws_availability_zones.available_azs.names)  
 }
 ```
-**Step 3: Datasource.tf file to gather information of already existing infrastructure in aws.**
+## Step 3: Datasource.tf file to gather information of already existing infrastructure in aws.
 
 It is essential to gather the data of availability zones in the region declared in the var.region variable. This will help to make this code to work anywhere irrespective of your intended region.
-```
+```sh
 /*==== Gatthering of availability zones in the present region from datasource ======*/  
   
 data "aws_availability_zones" "available_azs" {  
@@ -148,16 +148,16 @@ data "aws_availability_zones" "available_azs" {
 }
 ```
 We can get the number of the availability zones using the following code, which can be utilized to decide the number of public and private subnets.
-```
+```sh
 #variables.tf  
 locals {  
   subnets = length(data.aws_availability_zones.available_azs.names)  
 }
 ```
-**Step 4: Creation of AWS Virtual Private Cloud.**
+## Step 4: Creation of AWS Virtual Private Cloud.
 
 vpc cidr is defined in the variable **cidr_vpc.** You have to enable dns hostnames and if you require a dedicated instance you can keep instance_tenancy **true.**
-```
+```sh
 /*==== vpc ======*/  
 /*create vpc in the cidr "172.16.0.0/16" */  
   
@@ -171,10 +171,10 @@ resource "aws_vpc" "vpc" {
   }  
 }
 ```
-**Step 5: Creation of Internet Gateway for the VPC**
+## Step 5: Creation of Internet Gateway for the VPC
 
 Public access from and to the VPC is possible only through Internet Gateway. Here we are creating and attaching the Internet Gateway.
-```
+```sh
 /*==== IGW ======*/  
 /* Create internet gateway for the public subnets and attach with vpc */  
   
@@ -186,10 +186,10 @@ resource "aws_internet_gateway" "igw" {
   }  
 }
 ```
-**Step 6: Creation of Public Subnets.**
+## Step 6: Creation of Public Subnets.
 
 As we already now the number of AZs and so the number of subnets can be one per Availability Zone (Its purely a choice of the situation.) You can assign the **count meta argument** with the number of required subnets. Selection of subnet through cidrsubnet() function gives us flexibility to select the required subnet block and here we are using 4 bits (/20) for subnetting. 16 (2⁴) subnets will be available for our use and each of them consists of 4094 host addresses that is very convenient.
-```
+```sh
 /*==== Public Subnets ======*/  
 /* Creation of Public subnets, one for each availability zone in the region  */  
   
@@ -212,10 +212,10 @@ availability_zone       = data.aws_availability_zones.available_azs.names[count.
 
 You have to keep the **map_public_ip_on_launch = true** for the public accesses of the instance in the public subnet.
 
-**Step 7: Creation of Private Subnets.**
+## Step 7: Creation of Private Subnets.
 
 You have to keep the **map_public_ip_on_launch = fa**lse for restricting default public IP assignment of the instances.
-```
+```sh
 /*==== Private Subnets ======*/  
 /* Creation of Private  subnets, one for each availability zone in the region  */  
   
@@ -230,10 +230,10 @@ resource "aws_subnet" "private" {
   }  
 }
 ```
-**Step 8: Creation of Elastic IP and Attachment with NAT Gateway.**
+## Step 8: Creation of Elastic IP and Attachment with NAT Gateway.
 
 NAT Gateway is a device which helps the instances in the private subnet to access the internet. It requires an Elastic IP to do the job. Placement of the NAT GW should be in any of the public subnets.
-```
+```sh
 /*==== Elastic IP ======*/  
 /* Creation of Elastic IP for  NAT Gateway */  
   
@@ -258,10 +258,10 @@ resource "aws_nat_gateway" "nat_gw" {
   depends_on = [aws_internet_gateway.igw]  
 }
 ```
-**Step 9a: Creation of route for public access via the Internet gateway for the vpc.**
+## Step 9a: Creation of route for public access via the Internet gateway for the vpc.
 
 We have to create the public route table and add a route through the IGW to the public IP space.
-```
+```sh
 /*==== Public Route Table ======*/  
   
 resource "aws_route_table" "public" {  
@@ -277,10 +277,10 @@ resource "aws_route_table" "public" {
   }  
 }
 ```
-**Step 9b: Association of Public Route Table with all the public subnets is a requirement for their public access.**
+## Step 9b: Association of Public Route Table with all the public subnets is a requirement for their public access.
 
 Selection of the subnet is done using count meta argument.
-```
+```sh
 /*==== Association Public Route Table ======*/  
 /*Association of Public route table with public subnets. */  
   
@@ -290,10 +290,10 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id  
 }
 ```
-**Step 10a: Creation of Private Route Table with route for public access via the NAT gateway.**
+## Step 10a: Creation of Private Route Table with route for public access via the NAT gateway.**
 
 **nat_gateway_id** is a mandatory requirement for this step, which requires the creation of NAT GW.
-```
+```sh
 /*==== Private Route Table ======*/  
 /*Creation of Private Route Table with route for public access via the NAT gateway */  
   
@@ -310,10 +310,10 @@ resource "aws_route_table" "private" {
   }  
 }
 ```
-**Step 10b : Association of Private Route Table with all the private subnets is a requirement.**
+## Step 10b : Association of Private Route Table with all the private subnets is a requirement.
 
 Selection of the subnet is done using **count meta argument.**
-```
+```sh
 /*==== Association Private Route Table ======*/  
 /*Association of Private route table with private subnets. */  
   
@@ -323,12 +323,12 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id  
 }
 ```
-**Step 11 : After coding we have to Plan the code to build the infrastructure.**
+## Step 11 : After coding we have to Plan the code to build the infrastructure.
 
 Let’s run `terraform fmt` to format our code and make it beautiful.Then, run`terraform validate`to validate the files.
 
 **terraform plan** command will provide us an overview about the infrastructural changes that are going to happen if we allow Terraform to do. The following output is edited to give a concise view.
-```
+```sh
 $ terraform plan  
  Reading...  
 Read complete after 1s [id=ap-south-1]  
@@ -419,10 +419,10 @@ Terraform will perform the following actions:
   
 Plan: 18 to add, 0 to change, 0 to destroy.
 ```
-**Step 12 : terraform apply command to implement the aws infrastructure.**
+## Step 12 : terraform apply command to implement the aws infrastructure.
 
 The terraform apply is a command is used to apply the changes required to reach the desired state of the configuration from the present state, or the pre-determined set of actions generated by a terraform plan execution plan.
-```
+```sh
 $ terraform apply -auto-approve  
 .  
 .  
@@ -507,3 +507,5 @@ Thank you for your time.
   <a target="_blank" href="https://github-readme-medium-recent-article.vercel.app/medium/@yespratheesh/2"><img src="https://github-readme-medium-recent-article.vercel.app/medium/@yespratheesh/2">
   
  <a target="_blank" href="https://github-readme-medium-recent-article.vercel.app/medium/@yespratheesh/1"><img src="https://github-readme-medium-recent-article.vercel.app/medium/@yespratheesh/1">
+
+
