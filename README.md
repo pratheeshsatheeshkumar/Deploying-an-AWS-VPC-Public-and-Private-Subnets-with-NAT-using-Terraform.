@@ -2,7 +2,7 @@
 
 ![](https://miro.medium.com/max/1400/0*TBBrFvlIpywPioWT.png)
 
-This article uses a refactored Terraform code to deploy AWS VPC, Public and Private Subnets with NAT Gateway.
+This article uses Terraform HCL code to deploy AWS VPC, Public and Private Subnets with NAT Gateway.
 
 You can utilize the code explained here to build your own infra as I have tried to keep it generic in terms of the number of Subnets and Availability Zones. This number is decided by the selection of your desired region.
 
